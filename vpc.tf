@@ -1,13 +1,16 @@
+provider "aws" {
+    region = "us-west-2"
+}
+
 resource "aws_vpc" "main_vpc" {
     cidr_block = "${var.vpc_cidr}"
     enable_dns_hostnames = true
-    tags {
-        Name = "terraform-aws-vpc"
+    tags = {
+        Name = "boardtime-aws-vpc"
     }
 }
 
 resource "aws_eip" "nat" {
-    instance = "${aws_instance.nat.id}"
     vpc = true
 }
 
@@ -16,7 +19,7 @@ resource "aws_eip" "web-1" {
     vpc = true
 }
 
-resource "aws_route_table" "sa-east-1a-public" {
+resource "aws_route_table" "public" {
     vpc_id = "${aws_vpc.main_vpc.id}"
 
     route {
@@ -24,69 +27,63 @@ resource "aws_route_table" "sa-east-1a-public" {
         gateway_id = "${aws_internet_gateway.ig-main.id}"
     }
 
-    tags {
+    tags = {
         Name = "Public Subnet"
     }
 }
 
-resource "aws_route_table" "sa-east-1a-public" {
+resource "aws_route_table_association" "public" {
+    subnet_id = "${aws_subnet.public.id}"
+    route_table_id = "${aws_route_table.public.id}"
+}
+
+resource "aws_route_table" "private" {
     vpc_id = "${aws_vpc.main_vpc.id}"
 
     route {
         cidr_block = "0.0.0.0/0"
-        gateway_id = "${aws_internet_gateway.ig-main.id}"
+        nat_gateway_id = "${aws_nat_gateway.nat.id}"
+
     }
 
-    tags {
-        Name = "Public Subnet"
-    }
-}
-
-resource "aws_route_table_association" "sa-east-1a-public" {
-    subnet_id = "${aws_subnet.sa-east-1a-public.id}"
-    route_table_id = "${aws_route_table.sa-east-1a-public.id}"
-}
-
-resource "aws_route_table" "sa-east-1a-private" {
-    vpc_id = "${aws_vpc.main_vpc.id}"
-
-    route {
-        cidr_block = "0.0.0.0/0"
-        instance_id = "${aws_instance.nat.id}"
-    }
-
-    tags {
+    tags = {
         Name = "Private Subnet"
     }
 }
 
-resource "aws_route_table_association" "sa-east-1a-private" {
-    subnet_id = "${aws_subnet.sa-east-1a-private.id}"
-    route_table_id = "${aws_route_table.sa-east-1a-private.id}"
+resource "aws_route_table_association" "private" {
+    subnet_id = "${aws_subnet.private.id}"
+    route_table_id = "${aws_route_table.private.id}"
 }
 
-resource "aws_subnet" "sa-east-1a-public" {
+resource "aws_subnet" "public" {
     vpc_id = "${aws_vpc.main_vpc.id}"
 
     cidr_block = "${var.public_subnet_cidr}"
-    availability_zone = "sa-east-1a"
 
-    tags {
+    tags = {
         Name = "Public Subnet"
     }
 }
 
-resource "aws_subnet" "sa-east-1a-private" {
+resource "aws_subnet" "private" {
     vpc_id = "${aws_vpc.main_vpc.id}"
 
     cidr_block = "${var.private_subnet_cidr}"
-    availability_zone = "sa-east-1a"
 
-    tags {
+    tags = {
         Name = "Private Subnet"
     }
 }
 
 resource "aws_internet_gateway" "ig-main" {
     vpc_id = "${aws_vpc.main_vpc.id}"
+}
+resource "aws_nat_gateway" "nat" {
+    allocation_id = "${aws_eip.nat.id}"
+    subnet_id = "${aws_subnet.public.id}"
+
+    tags = {
+        Name = "NAT"
+    }
 }
