@@ -1,0 +1,14 @@
+{
+    "builders": [
+      {
+        "type": "ebs",
+        "access_key": "{{user `access_key`}}",
+        "secret_key": "{{user `secret_key`}}",
+        "region":"{{user `region`}}",
+        "image_name": "metar_app",
+        "source_image": "ami-0c5204531f799e0c6",
+        "ssh_username": "ec2-user",
+        "instance_type": "t3a.small",
+      }
+    ]
+  }
